@@ -6,14 +6,30 @@ namespace TechMove.Tests
     public class PdfTests
     {
         [Fact]
-        public void RejectNonPdfFile()
+        public void AcceptPdfFile()
         {
-            string fileName = "test.exe";
+            // Arrange
+            string fileName = "Agreement.pdf";
 
-            bool valid =
-                Path.GetExtension(fileName)
+            // Act
+            bool valid = Path.GetExtension(fileName)
                 .ToLower() == ".pdf";
 
+            // Assert
+            Assert.True(valid);
+        }
+
+        [Fact]
+        public void RejectNonPdfFile()
+        {
+            // Arrange
+            string fileName = "Test.exe";
+
+            // Act
+            bool valid = Path.GetExtension(fileName)
+                .ToLower() == ".pdf";
+
+            // Assert
             Assert.False(valid);
         }
     }
