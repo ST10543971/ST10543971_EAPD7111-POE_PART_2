@@ -1,0 +1,115 @@
+<form method="get">
+    <p>
+    <a asp-action="Create"
+       class="btn btn-success">
+        Create New Contract
+    </a>
+</p>
+
+    <div class="row mb-3">
+
+        <div class="col-md-3">
+            <label>Start Date</label>
+            <input type="date"
+                   name="startDate"
+                   class="form-control" />
+        </div>
+
+        <div class="col-md-3">
+            <label>End Date</label>
+            <input type="date"
+                   name="endDate"
+                   class="form-control" />
+        </div>
+
+        <div class="col-md-3">
+            <label>Status</label>
+
+            <select name="status"
+                    class="form-control">
+
+                <option value="">All</option>
+                <option value="Draft">Draft</option>
+                <option value="Active">Active</option>
+                <option value="Expired">Expired</option>
+                <option value="OnHold">On Hold</option>
+
+            </select>
+        </div>
+
+        <div class="col-md-3">
+            <label>&nbsp;</label>
+
+            <button type="submit"
+                    class="btn btn-primary form-control">
+                Search
+            </button>
+        </div>
+
+    </div>
+
+</form>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>Client</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+            <th>Status</th>
+            <th>Service Level</th>
+            <th>Agreement</th>
+            <th></th>
+        </tr>
+    </thead>
+
+    <tbody>
+@foreach (var item in Model)
+{
+        <tr>
+
+            <td>
+                @item.Client?.Name
+            </td>
+
+            <td>
+                @item.StartDate.ToShortDateString()
+            </td>
+
+            <td>
+                @item.EndDate.ToShortDateString()
+            </td>
+
+            <td>
+                @item.Status
+            </td>
+
+            <td>
+                @item.ServiceLevel
+            </td>
+
+            <td>
+                @if (!string.IsNullOrEmpty(item.SignedAgreementPath))
+                {
+                    <a asp-action="Download"
+                       asp-route-fileName="@item.SignedAgreementPath">
+                        Download PDF
+                    </a>
+                }
+            </td>
+
+            <td>
+                <a asp-action="Edit"
+                   asp-route-id="@item.Id">Edit</a> |
+
+                <a asp-action="Details"
+                   asp-route-id="@item.Id">Details</a> |
+
+                <a asp-action="Delete"
+                   asp-route-id="@item.Id">Delete</a>
+            </td>
+
+        </tr>
+}
+    </tbody>
+</table>
