@@ -1,0 +1,69 @@
+name: techmove
+
+services:
+  sql-server-db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: sql-server-db
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD}
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -C -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -Q \"SELECT 1\" || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks: [techmove-network]
+
+  techmove-api:
+    build:
+      context: .
+      dockerfile: TechMove.Api/Dockerfile
+    container_name: techmove-api
+    restart: unless-stopped
+    depends_on:
+      sql-server-db:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__DefaultConnection: "Server=sql-server-db,1433;Database=TechMoveDb;User Id=sa;Password=${MSSQL_SA_PASSWORD};TrustServerCertificate=True"
+      Jwt__Key: ${JWT_KEY}
+      Jwt__Issuer: TechMove.Api
+      Jwt__Audience: TechMove.Web
+      Seed__AdminPassword: ${SEED_ADMIN_PASSWORD}
+      Seed__ManagerPassword: ${SEED_MANAGER_PASSWORD}
+      FileStorage__RootPath: /app/Uploads
+      Swagger__Enabled: "true"
+    ports:
+      - "5000:8080"
+    volumes:
+      - agreements-data:/app/Uploads
+    networks: [techmove-network]
+
+  techmove-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: techmove-web
+    restart: unless-stopped
+    depends_on:
+      - techmove-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ApiSettings__BaseUrl: http://techmove-api:8080
+    ports:
+      - "5001:8080"
+    networks: [techmove-network]
+
+networks:
+  techmove-network:
+    driver: bridge
+
+volumes:
+  sql-data:
+  agreements-data:

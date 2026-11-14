@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace TechMove.Migrations
+namespace TechMove.Api.Migrations
 {
     /// <inheritdoc />
     public partial class AddUsdAmount : Migration
@@ -27,3 +27,4 @@ namespace TechMove.Migrations
         }
     }
 }
+

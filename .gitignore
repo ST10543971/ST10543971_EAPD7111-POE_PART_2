@@ -8,4 +8,8 @@ obj/
 *.mdf
 *.ldf
 
-Videos/
+ Videos/
+
+ .env
+
+TechMove.Tests/TestResults/

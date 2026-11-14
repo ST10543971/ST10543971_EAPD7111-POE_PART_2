@@ -1,195 +1,63 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
-using Microsoft.EntityFrameworkCore;
-using TechMove.Data;
 using TechMove.Models;
-using TechMove.Services;
+using TechMove.Services.ApiClients;
 
+namespace TechMove.Controllers;
 
-
-namespace TechMove.Controllers
+[Authorize]
+public sealed class ServiceRequestsController(IServiceRequestApiService requests, IContractApiService contracts, IExchangeRateApiService rates) : Controller
 {
-    public class ServiceRequestsController : Controller
+    public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        private readonly ApplicationDbContext _context;
-        private readonly CurrencyService _currencyService;
-        public ServiceRequestsController(
-     ApplicationDbContext context,
-     CurrencyService currencyService)
+        var result = await requests.GetAsync(cancellationToken: cancellationToken);
+        if (!result.IsSuccess) TempData["Error"] = result.ErrorMessage;
+        return View(result.Value ?? Array.Empty<ServiceRequest>());
+    }
+
+    public async Task<IActionResult> Details(int id, CancellationToken cancellationToken)
+    {
+        var result = await requests.GetAsync(id, cancellationToken: cancellationToken);
+        return !result.IsSuccess || result.Value is null ? NotFound() : View(result.Value);
+    }
+
+    public async Task<IActionResult> Create(CancellationToken cancellationToken)
+    {
+        await PopulateContractsAsync(cancellationToken);
+        return View(new ServiceRequest());
+    }
+
+    [HttpPost, ValidateAntiForgeryToken]
+    public async Task<IActionResult> Create(ServiceRequest request, CancellationToken cancellationToken)
+    {
+        if (!ModelState.IsValid)
         {
-            _context = context;
-            _currencyService = currencyService;
+            await PopulateContractsAsync(cancellationToken);
+            return View(request);
         }
-
-
-        // GET: ServiceRequests
-        public async Task<IActionResult> Index()
+        var result = await requests.CreateAsync(request, cancellationToken);
+        if (!result.IsSuccess)
         {
-            var applicationDbContext = _context.ServiceRequests.Include(s => s.Contract);
-            return View(await applicationDbContext.ToListAsync());
+            ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "The service request could not be created.");
+            await PopulateContractsAsync(cancellationToken);
+            return View(request);
         }
+        TempData["Success"] = "Service request created successfully.";
+        return RedirectToAction(nameof(Index));
+    }
 
-        // GET: ServiceRequests/Details/5
-        public async Task<IActionResult> Details(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
+    [HttpGet]
+    public async Task<IActionResult> GetRate(CancellationToken cancellationToken)
+    {
+        var result = await rates.GetUsdZarAsync(cancellationToken);
+        return result.IsSuccess ? Json(result.Value) : StatusCode(result.StatusCode == 0 ? 503 : result.StatusCode, new { error = result.ErrorMessage });
+    }
 
-            var serviceRequest = await _context.ServiceRequests
-                .Include(s => s.Contract)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (serviceRequest == null)
-            {
-                return NotFound();
-            }
-
-            return View(serviceRequest);
-        }
-
-        // GET: ServiceRequests/Create
-        public IActionResult Create()
-        {
-            ViewData["ContractId"] =
-                new SelectList(_context.Contracts,
-                "Id",
-                "ServiceLevel");
-
-            return View();
-        }
-
-        // POST: ServiceRequests/Create
-
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,ContractId,Description,UsdAmount,Cost,Status")] ServiceRequest serviceRequest)
-        {
-            if (ModelState.IsValid)
-            {
-                var contract = await _context.Contracts.FirstOrDefaultAsync(c =>
-        c.Id == serviceRequest.ContractId);
-
-                if (contract != null &&
-                   (contract.Status == ContractStatus.Expired ||
-                    contract.Status == ContractStatus.OnHold))
-                {
-                    ModelState.AddModelError("",
-                        "Cannot create a Service Request for an Expired or On Hold Contract.");
-
-                    ViewData["ContractId"] =
-                        new SelectList(_context.Contracts,
-                        "Id",
-                        "Id",
-                        serviceRequest.ContractId);
-
-                    return View(serviceRequest);
-                }
-                var exchangeRate =
-     await _currencyService.GetUsdToZarRate();
-
-                serviceRequest.Cost =
-                    serviceRequest.UsdAmount * exchangeRate;
-
-                _context.Add(serviceRequest);
-
-                await _context.SaveChangesAsync();
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["ContractId"] = new SelectList(_context.Contracts, "Id", "Id", serviceRequest.ContractId);
-            return View(serviceRequest);
-        }
-
-        // GET: ServiceRequests/Edit/5
-        public async Task<IActionResult> Edit(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var serviceRequest = await _context.ServiceRequests.FindAsync(id);
-            if (serviceRequest == null)
-            {
-                return NotFound();
-            }
-            ViewData["ContractId"] = new SelectList(_context.Contracts, "Id", "Id", serviceRequest.ContractId);
-            return View(serviceRequest);
-        }
-
-        // POST: ServiceRequests/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,ContractId,Description,Cost,Status")] ServiceRequest serviceRequest)
-        {
-            if (id != serviceRequest.Id)
-            {
-                return NotFound();
-            }
-
-            if (ModelState.IsValid)
-            {
-                try
-                {
-                    _context.Update(serviceRequest);
-                    await _context.SaveChangesAsync();
-                }
-                catch (DbUpdateConcurrencyException)
-                {
-                    if (!ServiceRequestExists(serviceRequest.Id))
-                    {
-                        return NotFound();
-                    }
-                    else
-                    {
-                        throw;
-                    }
-                }
-                return RedirectToAction(nameof(Index));
-            }
-            ViewData["ContractId"] = new SelectList(_context.Contracts, "Id", "Id", serviceRequest.ContractId);
-            return View(serviceRequest);
-        }
-
-        // GET: ServiceRequests/Delete/5
-        public async Task<IActionResult> Delete(int? id)
-        {
-            if (id == null)
-            {
-                return NotFound();
-            }
-
-            var serviceRequest = await _context.ServiceRequests
-                .Include(s => s.Contract)
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (serviceRequest == null)
-            {
-                return NotFound();
-            }
-
-            return View(serviceRequest);
-        }
-
-        // POST: ServiceRequests/Delete/5
-        [HttpPost, ActionName("Delete")]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> DeleteConfirmed(int id)
-        {
-            var serviceRequest = await _context.ServiceRequests.FindAsync(id);
-            if (serviceRequest != null)
-            {
-                _context.ServiceRequests.Remove(serviceRequest);
-            }
-
-            await _context.SaveChangesAsync();
-            return RedirectToAction(nameof(Index));
-        }
-
-        private bool ServiceRequestExists(int id)
-        {
-            return _context.ServiceRequests.Any(e => e.Id == id);
-        }
+    private async Task PopulateContractsAsync(CancellationToken cancellationToken)
+    {
+        var result = await contracts.SearchAsync(null, null, null, cancellationToken);
+        ViewData["ContractId"] = new SelectList(result.Value ?? Array.Empty<Contract>(), "Id", "ServiceLevel");
+        if (!result.IsSuccess) ModelState.AddModelError(string.Empty, result.ErrorMessage ?? "Contracts could not be loaded.");
     }
 }

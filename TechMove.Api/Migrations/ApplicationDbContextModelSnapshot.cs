@@ -3,20 +3,17 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
-using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using TechMove.Data;
+using TechMove.Api.Data;
 
 #nullable disable
 
-namespace TechMove.Migrations
+namespace TechMove.Api.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20260929195434_AddUsdAmount")]
-    partial class AddUsdAmount
+    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
     {
-        /// <inheritdoc />
-        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -25,7 +22,35 @@ namespace TechMove.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
-            modelBuilder.Entity("TechMove.Models.Client", b =>
+            modelBuilder.Entity("TechMove.Api.Models.AppUser", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(450)");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Email")
+                        .IsUnique();
+
+                    b.ToTable("AppUsers");
+                });
+
+            modelBuilder.Entity("TechMove.Api.Models.Client", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -50,7 +75,7 @@ namespace TechMove.Migrations
                     b.ToTable("Clients");
                 });
 
-            modelBuilder.Entity("TechMove.Models.Contract", b =>
+            modelBuilder.Entity("TechMove.Api.Models.Contract", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -84,7 +109,7 @@ namespace TechMove.Migrations
                     b.ToTable("Contracts");
                 });
 
-            modelBuilder.Entity("TechMove.Models.ServiceRequest", b =>
+            modelBuilder.Entity("TechMove.Api.Models.ServiceRequest", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -102,6 +127,9 @@ namespace TechMove.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<decimal>("ExchangeRate")
+                        .HasColumnType("decimal(18,6)");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -116,9 +144,9 @@ namespace TechMove.Migrations
                     b.ToTable("ServiceRequests");
                 });
 
-            modelBuilder.Entity("TechMove.Models.Contract", b =>
+            modelBuilder.Entity("TechMove.Api.Models.Contract", b =>
                 {
-                    b.HasOne("TechMove.Models.Client", "Client")
+                    b.HasOne("TechMove.Api.Models.Client", "Client")
                         .WithMany("Contracts")
                         .HasForeignKey("ClientId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -127,9 +155,9 @@ namespace TechMove.Migrations
                     b.Navigation("Client");
                 });
 
-            modelBuilder.Entity("TechMove.Models.ServiceRequest", b =>
+            modelBuilder.Entity("TechMove.Api.Models.ServiceRequest", b =>
                 {
-                    b.HasOne("TechMove.Models.Contract", "Contract")
+                    b.HasOne("TechMove.Api.Models.Contract", "Contract")
                         .WithMany("ServiceRequests")
                         .HasForeignKey("ContractId")
                         .OnDelete(DeleteBehavior.Cascade)
@@ -138,12 +166,12 @@ namespace TechMove.Migrations
                     b.Navigation("Contract");
                 });
 
-            modelBuilder.Entity("TechMove.Models.Client", b =>
+            modelBuilder.Entity("TechMove.Api.Models.Client", b =>
                 {
                     b.Navigation("Contracts");
                 });
 
-            modelBuilder.Entity("TechMove.Models.Contract", b =>
+            modelBuilder.Entity("TechMove.Api.Models.Contract", b =>
                 {
                     b.Navigation("ServiceRequests");
                 });

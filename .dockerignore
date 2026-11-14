@@ -1,0 +1,12 @@
+bin/
+obj/
+.vs/
+.git/
+.github/
+docs/
+**/*.user
+.env
+Dockerfile*
+docker-compose*
+TechMove.Tests/
+Documentation/
