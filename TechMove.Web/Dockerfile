@@ -1,16 +1,9 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
-COPY TechMove.csproj .
-RUN dotnet restore TechMove.csproj
-COPY Controllers/ Controllers/
-COPY Models/ Models/
-COPY Services/ Services/
-COPY Views/ Views/
-COPY wwwroot/ wwwroot/
-COPY Program.cs .
-COPY appsettings*.json .
-COPY Properties/ Properties/
-RUN dotnet publish TechMove.csproj -c Release -o /app/publish /p:UseAppHost=false --no-restore
+COPY TechMove.Web/TechMove.csproj TechMove.Web/
+RUN dotnet restore TechMove.Web/TechMove.csproj
+COPY TechMove.Web/ TechMove.Web/
+RUN dotnet publish TechMove.Web/TechMove.csproj -c Release -o /app/publish /p:UseAppHost=false --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app

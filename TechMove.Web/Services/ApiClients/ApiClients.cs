@@ -3,6 +3,7 @@ using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Security.Claims;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Http;
 using TechMove.Models;
@@ -53,6 +54,11 @@ public interface IAuthApiService
 
 public abstract class ApiClientBase(HttpClient httpClient, ILogger logger)
 {
+    protected static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new JsonStringEnumConverter() }
+    };
+
     protected async Task<ApiResult<T>> SendAsync<T>(HttpRequestMessage request, CancellationToken cancellationToken)
     {
         try
@@ -60,7 +66,7 @@ public abstract class ApiClientBase(HttpClient httpClient, ILogger logger)
             using var response = await httpClient.SendAsync(request, cancellationToken);
             if (!response.IsSuccessStatusCode)
                 return ApiResult<T>.Failure(await ReadErrorAsync(response), (int)response.StatusCode);
-            var value = await response.Content.ReadFromJsonAsync<T>(cancellationToken: cancellationToken);
+            var value = await response.Content.ReadFromJsonAsync<T>(JsonOptions, cancellationToken);
             return value is null ? ApiResult<T>.Failure("The API returned an empty response.", (int)response.StatusCode) : ApiResult<T>.Success(value, (int)response.StatusCode);
         }
         catch (HttpRequestException exception)
@@ -100,7 +106,7 @@ public sealed class ClientApiService(HttpClient client, ILogger<ClientApiService
     }
 
     public Task<ApiResult<Client>> CreateAsync(Client client, CancellationToken cancellationToken = default) =>
-        SendAsync<Client>(new HttpRequestMessage(HttpMethod.Post, "api/clients") { Content = JsonContent.Create(new { client.Name, client.ContactDetails, client.Region }) }, cancellationToken);
+        SendAsync<Client>(new HttpRequestMessage(HttpMethod.Post, "api/clients") { Content = JsonContent.Create(new { client.Name, client.ContactDetails, client.Region }, options: JsonOptions) }, cancellationToken);
 }
 
 public sealed class ContractApiService(HttpClient client, ILogger<ContractApiService> logger) : ApiClientBase(client, logger), IContractApiService
@@ -118,11 +124,11 @@ public sealed class ContractApiService(HttpClient client, ILogger<ContractApiSer
     public Task<ApiResult<Contract>> GetAsync(int id, CancellationToken cancellationToken = default) => SendAsync<Contract>(new HttpRequestMessage(HttpMethod.Get, $"api/contracts/{id}"), cancellationToken);
 
     public Task<ApiResult<Contract>> CreateAsync(Contract contract, CancellationToken cancellationToken = default) =>
-        SendAsync<Contract>(new HttpRequestMessage(HttpMethod.Post, "api/contracts") { Content = JsonContent.Create(new { contract.ClientId, contract.StartDate, contract.EndDate, contract.Status, contract.ServiceLevel }) }, cancellationToken);
+        SendAsync<Contract>(new HttpRequestMessage(HttpMethod.Post, "api/contracts") { Content = JsonContent.Create(new { contract.ClientId, contract.StartDate, contract.EndDate, contract.Status, contract.ServiceLevel }, options: JsonOptions) }, cancellationToken);
 
     public async Task<ApiResult<bool>> UpdateStatusAsync(int id, ContractStatus status, CancellationToken cancellationToken = default)
     {
-        var request = new HttpRequestMessage(HttpMethod.Patch, $"api/contracts/{id}/status") { Content = JsonContent.Create(new { status }) };
+        var request = new HttpRequestMessage(HttpMethod.Patch, $"api/contracts/{id}/status") { Content = JsonContent.Create(new { status }, options: JsonOptions) };
         var result = await SendAsync<Contract>(request, cancellationToken);
         return result.IsSuccess ? ApiResult<bool>.Success(true, result.StatusCode) : ApiResult<bool>.Failure(result.ErrorMessage!, result.StatusCode);
     }
@@ -168,7 +174,7 @@ public sealed class ServiceRequestApiService(HttpClient client, ILogger<ServiceR
     }
 
     public Task<ApiResult<ServiceRequest>> CreateAsync(ServiceRequest request, CancellationToken cancellationToken = default) =>
-        SendAsync<ServiceRequest>(new HttpRequestMessage(HttpMethod.Post, "api/servicerequests") { Content = JsonContent.Create(new { request.ContractId, request.Description, AmountUsd = request.UsdAmount, request.Status }) }, cancellationToken);
+        SendAsync<ServiceRequest>(new HttpRequestMessage(HttpMethod.Post, "api/servicerequests") { Content = JsonContent.Create(new { request.ContractId, request.Description, AmountUsd = request.UsdAmount, request.Status }, options: JsonOptions) }, cancellationToken);
 }
 
 public sealed class ExchangeRateApiService(HttpClient client, ILogger<ExchangeRateApiService> logger) : ApiClientBase(client, logger), IExchangeRateApiService

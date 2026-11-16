@@ -20,13 +20,16 @@
   <ItemGroup>
     <None Include=".github\copilot-instructions.md" />
     <None Include=".github\workflows\ci.yml" />
-    <None Include="TechMove.Api\Dockerfile" />
     <None Include="TechMove.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="10.0.2" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="TechMove.Api\" />
   </ItemGroup>
 
 </Project>
